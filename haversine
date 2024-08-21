@@ -1,0 +1,61 @@
+// Defina a tabela como "Raio"
+const table = base.getTable("Formulário");
+
+// Função para calcular a distância usando a fórmula de Haversine
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const raioTerra = 6371; // Raio médio da Terra em quilômetros
+
+  // Converte graus para radianos
+  const toRadian = (valor) => (Math.PI / 180) * valor;
+
+  // Diferença de coordenadas
+  const deltaLat = toRadian(lat2 - lat1);
+  const deltaLon = toRadian(lon2 - lon1);
+
+  // Fórmula de Haversine
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(toRadian(lat1)) * Math.cos(toRadian(lat2)) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  // Distância em quilômetros
+  const distancia = raioTerra * c;
+
+  return distancia;
+}
+
+// Função principal para calcular e atualizar o campo "Radius"
+async function main() {
+  let records = await table.selectRecordsAsync();
+
+  for (let record of records.records) {
+    let lat = record.getCellValue("Latitude1");
+    let lon = record.getCellValue("Longitude1");
+
+    // Coordenadas do ponto central
+    const pontoCentralLat = -23.57507611204031;
+    const pontoCentralLon = -46.751629218439554;
+
+    // Calcular a distância
+    const distancia = calcularDistancia(lat, lon, pontoCentralLat, pontoCentralLon);
+
+    // Limite de raio em 5km
+    const raioLimite = 5;
+
+    // Atualizar o campo "Radius" com Permitir ou Negar
+    const dentroDoRaio = distancia <= raioLimite;
+    const novoValorRadius = dentroDoRaio ? "Permitir" : "Negar";
+
+    // Verificar se o campo "Radius" está presente antes de tentar atualizar
+    if (record.getCellValue("Radius") !== undefined) {
+      // Atualizar apenas o campo específico da coluna "Radius"
+      await table.updateRecordAsync(record, {
+        "Radius": novoValorRadius
+      });
+    }
+  }
+}
+
+// Chama a função principal
+main();
